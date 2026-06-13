@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>물풍선 아케이드</title>
+<style>
+  :root{
+    --bg-deep:#0b2a4a;
+    --bg-mid:#12406e;
+    --aqua:#37c2e0;
+    --aqua-soft:#bdeefb;
+    --sun:#ffd23f;
+    --coral:#ff6b6b;
+    --ink:#06223d;
+    --panel:#0f3358;
+    --panel-line:#2f6ea3;
+    --stage-max:560px;
+    --stage-aspect:15 / 13;
+  }
+  body[data-theme="sunset"]{
+    --bg-deep:#32143a;
+    --bg-mid:#93414f;
+    --aqua:#ff9c5a;
+    --aqua-soft:#ffe9c8;
+    --sun:#ffe06b;
+    --coral:#62d2e8;
+    --ink:#2b122a;
+    --panel:#4a1f45;
+    --panel-line:#f08a5d;
+  }
+  body[data-theme="forest"]{
+    --bg-deep:#082f2a;
+    --bg-mid:#1d6b52;
+    --aqua:#6ee0a3;
+    --aqua-soft:#d9ffe7;
+    --sun:#f6dd62;
+    --coral:#ff7396;
+    --ink:#08231e;
+    --panel:#123f36;
+    --panel-line:#55a97f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #1c5a93 0%, var(--bg-mid) 45%, var(--bg-deep) 100%);
+    color:var(--aqua-soft);
+    display:flex;flex-direction:column;align-items:center;
+    min-height:100%;
+    padding:14px 12px 26px;
+    overflow-x:hidden;
+    user-select:none;
+  }
+  .title{
+    font-size:clamp(20px,5.5vw,30px);
+    font-weight:800;letter-spacing:1px;
+    color:#fff;
+    text-shadow:0 2px 0 var(--aqua),0 4px 14px rgba(0,0,0,.5);
+    margin-bottom:8px;text-align:center;
+  }
+  .title b{color:var(--sun);}
+  .hud{
+    width:100%;max-width:var(--stage-max);
+    display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+    margin-bottom:8px;
+  }
+  .chip{
+    background:linear-gradient(180deg,var(--panel),#0b2848);
+    border:2px solid var(--panel-line);
+    border-radius:12px;
+    padding:6px 11px;
+    font-size:14px;font-weight:700;
+    display:flex;align-items:center;gap:6px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+    white-space:nowrap;
+  }
+  .chip .lbl{color:#7fb6e0;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;}
+  .chip .val{color:#fff;}
+  .settings{
+    width:100%;max-width:var(--stage-max);
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;
+    margin-bottom:10px;
+  }
+  .control-row{
+    display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.12));
+    border:2px solid var(--panel-line);
+    border-radius:14px;
+    padding:8px;
+  }
+  .control-label{
+    color:var(--aqua-soft);
+    font-size:12px;font-weight:800;letter-spacing:.4px;
+    white-space:nowrap;
+  }
+  .segmented{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+  .option-btn{
+    min-height:32px;
+    border:2px solid rgba(255,255,255,.18);
+    border-radius:10px;
+    background:rgba(9,31,52,.58);
+    color:var(--aqua-soft);
+    padding:5px 10px;
+    font-size:12px;font-weight:900;
+    cursor:pointer;
+    box-shadow:0 3px 0 rgba(0,0,0,.28);
+  }
+  .option-btn.active{
+    background:linear-gradient(180deg,var(--sun),#f2a900);
+    border-color:rgba(255,255,255,.48);
+    color:#4f3500;
+  }
+  .option-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28);}
+  .stage-wrap{
+    position:relative;
+    width:100%;max-width:var(--stage-max);
+    aspect-ratio:var(--stage-aspect);
+    border-radius:16px;
+    overflow:hidden;
+    border:4px solid #08263f;
+    box-shadow:0 14px 40px rgba(0,0,0,.55),inset 0 0 0 2px rgba(255,255,255,.04);
+    background:#0a2238;
+  }
+  canvas{display:block;width:100%;height:100%;image-rendering:auto;}
+  .overlay{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;text-align:center;
+    background:rgba(5,20,38,.72);
+    backdrop-filter:blur(3px);
+    z-index:5;
+  }
+  .overlay.hidden{display:none;}
+  .overlay h2{font-size:clamp(26px,8vw,46px);color:#fff;text-shadow:0 3px 0 var(--aqua);}
+  .overlay h2.lose{text-shadow:0 3px 0 var(--coral);}
+  .overlay p{font-size:15px;max-width:80%;line-height:1.5;color:#cfe9f7;}
+  .countdown{font-size:clamp(60px,18vw,120px);font-weight:900;color:var(--sun);text-shadow:0 4px 0 #b87f00,0 0 30px rgba(255,210,63,.6);}
+  .btn{
+    cursor:pointer;border:none;
+    background:linear-gradient(180deg,var(--sun),#f2a900);
+    color:#5a3b00;font-weight:800;font-size:17px;letter-spacing:.5px;
+    padding:13px 26px;border-radius:14px;
+    box-shadow:0 5px 0 #b87f00,0 8px 18px rgba(0,0,0,.4);
+    transition:transform .06s,box-shadow .06s;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #b87f00;}
+  .help{
+    width:100%;max-width:var(--stage-max);margin-top:12px;
+    font-size:12.5px;color:#9cc6e6;line-height:1.6;text-align:center;
+  }
+  .help kbd{
+    background:#0d3052;border:1px solid #2f6ea3;border-bottom-width:2px;
+    border-radius:6px;padding:1px 7px;color:#fff;font-size:12px;font-weight:700;
+  }
+  /* touch controls */
+  .touch{
+    width:100%;max-width:var(--stage-max);margin-top:14px;
+    display:flex;justify-content:space-between;align-items:flex-end;gap:10px;
+  }
+  .dpad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(3,58px);gap:6px;}
+  .dpad button{
+    border:none;border-radius:14px;
+    background:linear-gradient(180deg,#1a4d7d,#0d3056);
+    border:2px solid #2f6ea3;
+    color:#cfe9f7;font-size:22px;font-weight:800;
+    box-shadow:0 4px 0 #082136;
+    touch-action:none;
+  }
+  .dpad button:active{transform:translateY(3px);box-shadow:0 1px 0 #082136;background:#226aa8;}
+  .dpad .e{visibility:hidden;}
+  .bomb{
+    width:96px;height:96px;border-radius:50%;
+    border:3px solid #ff9c9c;
+    background:radial-gradient(circle at 35% 30%,#7fe3ff,#2aa7d8 60%,#1d7fae);
+    color:#04344a;font-size:40px;font-weight:900;
+    box-shadow:0 6px 0 #14617f,0 10px 20px rgba(0,0,0,.4);
+    touch-action:none;
+  }
+  .bomb:active{transform:translateY(5px);box-shadow:0 1px 0 #14617f;}
+  @media (hover:hover) and (pointer:fine){
+    .touch{display:none;} /* hide touch pad on desktop with mouse */
+  }
+  @media (max-width:720px){
+    .settings{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+  <div class="title">💧 물풍선 <b>아케이드</b></div>
+
+  <div class="hud">
+    <div class="chip"><span class="lbl">점수</span><span class="val" id="hud-score">0</span></div>
+    <div class="chip"><span class="lbl">시간</span><span class="val" id="hud-time">3:00</span></div>
+    <div class="chip">🎈<span class="val" id="hud-balloon">1</span></div>
+    <div class="chip">💦<span class="val" id="hud-power">1</span></div>
+    <div class="chip">👟<span class="val" id="hud-speed">1</span></div>
+    <div class="chip">😼<span class="val" id="hud-bots">3</span></div>
+  </div>
+
+  <div class="settings" aria-label="게임 설정">
+    <div class="control-row">
+      <span class="control-label">테마</span>
+      <div class="segmented" id="theme-controls">
+        <button class="option-btn active" type="button" data-theme-choice="ocean" aria-pressed="true">바다</button>
+        <button class="option-btn" type="button" data-theme-choice="sunset" aria-pressed="false">노을</button>
+        <button class="option-btn" type="button" data-theme-choice="forest" aria-pressed="false">숲</button>
+      </div>
+    </div>
+    <div class="control-row">
+      <span class="control-label">맵 크기</span>
+      <div class="segmented" id="map-controls">
+        <button class="option-btn active" type="button" data-map-choice="default" aria-pressed="true">기본 15x13</button>
+        <button class="option-btn" type="button" data-map-choice="wide" aria-pressed="false">확장 19x15</button>
+        <button class="option-btn" type="button" data-map-choice="large" aria-pressed="false">대형 23x17</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="game"></canvas>
+    <div class="overlay" id="overlay">
+      <h2 id="ov-title">물풍선 아케이드</h2>
+      <p id="ov-text">AI 봇들이 플레이어와 서로를 노리며 물풍선을 설치합니다. 시작하면 박진감 있는 BGM과 효과음이 재생됩니다. 모두 물방울에 가둬 터뜨리면 승리!</p>
+      <button class="btn" id="ov-btn">게임 시작</button>
+    </div>
+  </div>
+
+  <div class="touch" id="touch">
+    <div class="dpad">
+      <button class="e"></button>
+      <button data-dir="up">▲</button>
+      <button class="e"></button>
+      <button data-dir="left">◀</button>
+      <button class="e"></button>
+      <button data-dir="right">▶</button>
+      <button class="e"></button>
+      <button data-dir="down">▼</button>
+      <button class="e"></button>
+    </div>
+    <button class="bomb" id="bomb">💧</button>
+  </div>
+
+  <div class="help">
+    <strong>조작</strong> · 이동 <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 또는 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · 물풍선 <kbd>Space</kbd> / <kbd>Z</kbd> · 다시하기 <kbd>R</kbd><br>
+    모바일은 아래 패드로 조작하세요.
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- 설정 ----------
+  const MAP_PRESETS = {
+    default:{label:"기본", cols:15, rows:13, tile:42, maxWidth:560},
+    wide:{label:"확장", cols:19, rows:15, tile:40, maxWidth:720},
+    large:{label:"대형", cols:23, rows:17, tile:38, maxWidth:860},
+  };
+  const THEME_PRESETS = {
+    ocean:{
+      floorA:"#0e4670", floorB:"#114e7a",
+      waterCore:"#ebfaff", waterMid:"#9fe9ff", waterEdge:"#5fc3e8",
+      splash:"#7fe3ff", shock:"#bdeefb", shockStrong:"#ffd23f",
+      trapShade:"#041d34", trapDanger:"#3b0710",
+      bubbleMid:"rgba(127,227,255,.34)", bubbleEdge:"rgba(55,194,224,.22)",
+      ring:"#ffd23f", warn:"#ffd23f", dangerWarn:"#ff6b6b",
+    },
+    sunset:{
+      floorA:"#67314f", floorB:"#7d3d48",
+      waterCore:"#fff5df", waterMid:"#ffc878", waterEdge:"#ff805d",
+      splash:"#ffd18a", shock:"#ffd18a", shockStrong:"#ff6b6b",
+      trapShade:"#271528", trapDanger:"#541722",
+      bubbleMid:"rgba(255,196,120,.34)", bubbleEdge:"rgba(255,128,93,.30)",
+      ring:"#ffe06b", warn:"#ffe06b", dangerWarn:"#62d2e8",
+    },
+    forest:{
+      floorA:"#135a44", floorB:"#176850",
+      waterCore:"#f0fff0", waterMid:"#92e6a7", waterEdge:"#4ccf86",
+      splash:"#a8f5bd", shock:"#b9f7c8", shockStrong:"#f6dd62",
+      trapShade:"#06251f", trapDanger:"#3a1022",
+      bubbleMid:"rgba(146,230,167,.34)", bubbleEdge:"rgba(76,207,134,.30)",
+      ring:"#f6dd62", warn:"#f6dd62", dangerWarn:"#ff7396",
+    },
+  };
+  let currentMapKey = "default";
+  let currentThemeKey = "ocean";
+  let theme = THEME_PRESETS.ocean;
+  let COLS = MAP_PRESETS.default.cols;
+  let ROWS = MAP_PRESETS.default.rows;
+  let TILE = MAP_PRESETS.default.tile;
+  let W = COLS * TILE, H = ROWS * TILE;
+  const EMPTY = 0, WALL = 1, BOX = 2;
+
+  const BALLOON_FUSE = 2.6;     // 물풍선 폭발까지(초)
+  const WATER_DUR    = 0.5;     // 물줄기 지속(초)
+  const TRAP_TIME    = 3.0;     // 물방울에 갇힌 뒤 펑까지(초)
+  const GAME_TIME    = 180;     // 제한시간 3분(초)
+  const TRAP_IMMUNE  = WATER_DUR + 0.12; // 갇힌 직후 같은 물줄기 무적
+  const BASE_SPEED   = 108;     // px/초
+  const SPEED_STEP   = 26;
+
+  // (캐릭터는 위 픽셀 스프라이트로 렌더)
+
+  // ---------- 캔버스 ----------
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  function fitCanvas(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function updateChoiceButtons(selector, activeValue, dataName){
+    document.querySelectorAll(selector).forEach(btn=>{
+      const active = btn.dataset[dataName] === activeValue;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+  function applyTheme(key){
+    if(!THEME_PRESETS[key]) key = "ocean";
+    currentThemeKey = key;
+    theme = THEME_PRESETS[key];
+    document.body.dataset.theme = key;
+    updateChoiceButtons("[data-theme-choice]", key, "themeChoice");
+    render();
+  }
+  function applyMapPreset(key, resetRound){
+    const preset = MAP_PRESETS[key] || MAP_PRESETS.default;
+    currentMapKey = MAP_PRESETS[key] ? key : "default";
+    COLS = preset.cols; ROWS = preset.rows; TILE = preset.tile;
+    W = COLS * TILE; H = ROWS * TILE;
+    document.documentElement.style.setProperty("--stage-max", `${preset.maxWidth}px`);
+    document.documentElement.style.setProperty("--stage-aspect", `${COLS} / ${ROWS}`);
+    fitCanvas();
+    updateChoiceButtons("[data-map-choice]", currentMapKey, "mapChoice");
+    if(resetRound){
+      stopMusic();
+      state = "ready";
+      resetGame();
+      showReadyOverlay(`맵 크기를 ${preset.label} ${COLS}x${ROWS}(으)로 바꿨습니다. 새 설정으로 시작하세요.`);
+      render();
+    }
+  }
+  fitCanvas();
+  window.addEventListener("resize", fitCanvas);
+
+  // ---------- 픽셀 스프라이트 (전부 오리지널 디자인) ----------
+  const CHAR_GRID = [
+    "..KKKK......KKKK..",
+    ".KHHHHKKKKKKHHHHK.",
+    ".KHHHHHHHHHHHHHHK.",
+    ".KHhhHHHHHHHHhhHK.",
+    ".KhhhHHHHHHHHhhhK.",
+    "..KHHHHHHHHHHHHK..",
+    ".KhHHHHFFFFHHHHhK.",
+    ".KhHHFFFFFFFFHHhK.",
+    ".KhHHFFFFFFFFHHhK.",
+    ".KhHFFEEFFEEFFHhK.",
+    ".KhHFFPEFFPEFFHhK.",
+    ".KhHHFPEFFPEFHHhK.",
+    "..KHHCFFMMFFCHHK..",
+    "..KHHHFFFFFFHHHK..",
+    "...KKHHHFFHHHKK...",
+    "...KBBHHHHHHBBK...",
+    "...KBBLLLLLLBBK...",
+    "...KBBLLLLLLBBK...",
+    "...KBBBLLLLBBBK...",
+    "....KBBBBBBBBK....",
+    "....KbbbBBbbbK....",
+    "....KbbbBBbbbK....",
+  ];
+  const SHARED = { K:"#1c162e", F:"#ffe0c4", E:"#ffffff", P:"#1c162e", C:"#ff96aa", M:"#3c283c" };
+  const CHAR_PALS = [
+    Object.assign({H:"#3fb6a6",h:"#2c8a7e",B:"#54c9b8",b:"#2f9384",L:"#e9fbf6"},SHARED), // 플레이어(민트)
+    Object.assign({H:"#ef5d5d",h:"#c23e3e",B:"#ff7a7a",b:"#d24f4f",L:"#ffeaea"},SHARED), // 봇(코랄)
+    Object.assign({H:"#9b7ad6",h:"#6f50a8",B:"#b196e6",b:"#7d5fc0",L:"#f1eaff"},SHARED), // 봇(바이올렛)
+    Object.assign({H:"#f0a93c",h:"#c47e1f",B:"#ffc25e",b:"#d8932e",L:"#fff2da"},SHARED), // 봇(앰버)
+  ];
+  const BALLOON_GRID = [
+    "..............","..............",".....KKKK.....","...KKWWWWKK...",
+    "..KWSSWWWWWK..",".KWSSSSWWWWWK.",".KWSSSSWWWWWK.",".KWWSSWWWWWWK.",
+    "KWWWWWWWWWWWWK","KWWWWWWWWWWWwK",".KWWWWWWWWWwK.",".KWWWWWWWWwwK.",
+    ".KWWWWWWWwwwK.","..KWWWWWwwwK..","...KKWwwwKK...",".....KwwK.....",
+  ];
+  const BALLOON_PAL = { K:"#141e37", W:"#78d2f0", w:"#3896c4", S:"#ebfaff" };
+  const CRATE_GRID = [
+    ".KKKKKKKKKKKKKK.","KLLLLLLDDLLLLLLK","KLSLLLLDDLLLLSLK","KBBBBBBDDBBBBBBK",
+    "KBBBBBBDDBBBBBBK","KBBBBBBDDBBBBBBK","KBBBBBBDDBBBBBBK","KDDDDDDDDDDDDDDK",
+    "KDDDDDDDDDDDDDDK","KBBBBBBDDBBBBBBK","KBBBBBBDDBBBBBBK","KBBBBBBDDBBBBBBK",
+    "KBBBBBBDDBBBBBBK","KDSDDDDDDDDDDSDK","KDDDDDDDDDDDDDDK",".KKKKKKKKKKKKKK.",
+  ];
+  const CRATE_PAL = { K:"#3c2210", B:"#c48042", L:"#e0a260", D:"#8c5426", S:"#5a3c1e" };
+  const WALL_GRID = [
+    "LLLLLLLLLLLLLLDD","LLLLLLLLLLLLLLDD","LLBBBBBBBBBBBBDD","LLBBBBBBBBBBBBDD",
+    "LLBBBBMMMMBBBBDD","LLBBBMMMMMMBBBDD","LLBBMMMMMMMMBBDD","LLBBMMMSSMMMBBDD",
+    "LLBBMMMSSMMMBBDD","LLBBMMMMMMMMBBDD","LLBBBMMMMMMBBBDD","LLBBBBMMMMBBBBDD",
+    "LLBBBBBBBBBBBBDD","LLBBBBBBBBBBBBDD","DDDDDDDDDDDDDDDD","DDDDDDDDDDDDDDDD",
+  ];
+  const WALL_PAL = { L:"#468cba", B:"#245680", D:"#143452", M:"#2e6c9c", S:"#96d2f0" };
+  const ITEM_GRIDS = {
+    balloon:[
+      "..............","......KKK.....",".....KWWWK....","....KWWWWWK...",
+      "...KWSSWWWWK..","...KWSSWWWWK..","...KWWWWWWWK..","...KWWWWWWWK..",
+      "...KWWWWWWWK..","....KWWWWWK...",".....KWWWK....",".....KwwK.....",
+      ".....KwwK.....","......KK......",
+    ],
+    power:[
+      "..............","......KK......",".....KRRK.....",".....KRRK.....",
+      ".....KRRRK....","....KRRRRRK...","...KRSSRRRRK..","...KRSSRRRRK..",
+      "..KRRSSRRRRRK.","...KRRRRRRRK..","...KRRRRRRRK..","....KRRRRRK...",
+      ".....KRRRK....","......KKK.....",
+    ],
+    speed:[
+      "..............","..............","..............","...KKKKKKKKK..",
+      "..KGGGGGGGGGK.","..KGGGGGGGGGK.","..KKKKKKKKKK..",".KGGGGGGGGGK..",
+      ".KGGGGGGGGGK..","..KKKKKKKKKKK.","...KGGGGGGGGGK","...KGGGGGGGGGK",
+      "....KKKKKKKKK.","..............",
+    ],
+  };
+  const ITEM_PAL = { K:"#141e37", W:"#78d2f0", w:"#3896c4", S:"#ebfaff", R:"#f05a5a", G:"#ffd23f" };
+
+  function buildSprite(grid, pal, ps){
+    const w=grid[0].length, h=grid.length;
+    const cv=document.createElement("canvas"); cv.width=w*ps; cv.height=h*ps;
+    const c=cv.getContext("2d");
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+      const col=pal[grid[y][x]]; if(!col) continue;
+      c.fillStyle=col; c.fillRect(x*ps,y*ps,ps,ps);
+    }
+    return cv;
+  }
+  const PS=4;
+  const SPR = {
+    chars: CHAR_PALS.map(p=>buildSprite(CHAR_GRID,p,PS)),
+    balloon: buildSprite(BALLOON_GRID,BALLOON_PAL,PS),
+    crate: buildSprite(CRATE_GRID,CRATE_PAL,PS),
+    wall: buildSprite(WALL_GRID,WALL_PAL,PS),
+    items: {
+      balloon: buildSprite(ITEM_GRIDS.balloon,ITEM_PAL,PS),
+      power:   buildSprite(ITEM_GRIDS.power,ITEM_PAL,PS),
+      speed:   buildSprite(ITEM_GRIDS.speed,ITEM_PAL,PS),
+    },
+  };
+  function blit(spr,dx,dy,dw,dh,flip){
+    ctx.imageSmoothingEnabled=false;
+    if(flip){ ctx.save(); ctx.translate(dx+dw,dy); ctx.scale(-1,1); ctx.drawImage(spr,0,0,dw,dh); ctx.restore(); }
+    else ctx.drawImage(spr,dx,dy,dw,dh);
+  }
+
+  // ---------- HUD ----------
+  const hud = {
+    score: document.getElementById("hud-score"),
+    time: document.getElementById("hud-time"),
+    balloon: document.getElementById("hud-balloon"),
+    power: document.getElementById("hud-power"),
+    speed: document.getElementById("hud-speed"),
+    bots: document.getElementById("hud-bots"),
+  };
+  const overlay = document.getElementById("overlay");
+  const ovTitle = document.getElementById("ov-title");
+  const ovText  = document.getElementById("ov-text");
+  const ovBtn   = document.getElementById("ov-btn");
+
+  // ---------- 사운드 / BGM(WebAudio, 외부 파일 없이 즉석 합성) ----------
+  let actx = null;
+  let musicTimer = null;
+  let musicStep = 0;
+  const MUSIC_BPM = 156;
+  const MUSIC_STEP = 60 / MUSIC_BPM / 2; // 8분음표 단위
+
+  function ensureAudio(){
+    if(!actx){
+      try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+    }
+    if(actx && actx.state === "suspended") actx.resume();
+  }
+
+  function tone(freq, dur=0.08, type="square", vol=0.04, when=0, slideTo=null){
+    if(!actx) return;
+    try{
+      const o = actx.createOscillator(), g = actx.createGain();
+      const t = actx.currentTime + when;
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      if(slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    }catch(e){}
+  }
+  function beep(freq, dur, type, vol){ tone(freq, dur, type, vol); }
+
+  function noise(dur=0.08, vol=0.04, when=0, hp=900){
+    if(!actx) return;
+    try{
+      const t = actx.currentTime + when;
+      const len = Math.max(1, Math.floor(actx.sampleRate * dur));
+      const buf = actx.createBuffer(1, len, actx.sampleRate);
+      const data = buf.getChannelData(0);
+      for(let i=0;i<len;i++) data[i] = Math.random()*2-1;
+      const src = actx.createBufferSource(); src.buffer = buf;
+      const filter = actx.createBiquadFilter(); filter.type = "highpass"; filter.frequency.value = hp;
+      const g = actx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(filter); filter.connect(g); g.connect(actx.destination);
+      src.start(t); src.stop(t + dur + 0.02);
+    }catch(e){}
+  }
+
+  function startMusic(){
+    ensureAudio();
+    if(!actx || musicTimer) return;
+    musicStep = 0;
+    const bass = [98,98,146.83,98,130.81,130.81,174.61,130.81,87.31,87.31,130.81,87.31,116.54,116.54,146.83,116.54];
+    const lead = [392,0,392,466.16,523.25,0,466.16,392,349.23,0,392,349.23,311.13,0,349.23,392];
+    const tick = ()=>{
+      if(!actx || state==="won" || state==="lost") return;
+      const s = musicStep % 16;
+      // 킥/스네어/하이햇: 박진감 있는 아케이드 리듬
+      if(s%4===0){ tone(90,0.09,"sine",0.035,0,45); }
+      if(s===4 || s===12){ noise(0.08,0.026,0,1300); tone(190,0.045,"triangle",0.018); }
+      if(s%2===1){ noise(0.035,0.012,0,4500); }
+      // 베이스와 리드 멜로디
+      tone(bass[s],0.10,"sawtooth",0.018);
+      if(lead[s]) tone(lead[s],0.07,"square",0.012);
+      // 시간이 얼마 안 남으면 긴장감 있는 고음 펄스 추가
+      if(timeLeft > 0 && timeLeft <= 30 && s%2===0) tone(880,0.04,"triangle",0.018);
+      musicStep++;
+    };
+    tick();
+    musicTimer = setInterval(tick, MUSIC_STEP*1000);
+  }
+  function stopMusic(){
+    if(musicTimer){ clearInterval(musicTimer); musicTimer = null; }
+  }
+
+  const sfx = {
+    place: ()=>{ tone(560,0.055,"sine",0.055); tone(760,0.045,"triangle",0.035,0.035); },
+    enemyPlace: ()=>tone(430,0.045,"square",0.018),
+    boom:  ()=>{ tone(150,0.18,"sawtooth",0.07,0,70); tone(80,0.25,"square",0.05); noise(0.22,0.06,0,500); },
+    trap:  ()=>{ tone(260,0.12,"sawtooth",0.06,0,180); noise(0.12,0.045,0,1200); tone(620,0.08,"triangle",0.045,0.10); },
+    tick:  ()=>{ tone(980,0.035,"square",0.035); tone(520,0.035,"square",0.025,0.04); },
+    pop:   ()=>{ tone(680,0.10,"triangle",0.07,0,1180); noise(0.12,0.045,0,1800); },
+    finish:()=>{ tone(1046,0.08,"square",0.07); tone(1568,0.10,"triangle",0.055,0.07); noise(0.10,0.035,0.02,3000); },
+    item:  ()=>{ tone(660,0.06,"sine",0.05); tone(880,0.08,"sine",0.05,0.06); },
+    win:   ()=>{ stopMusic(); [523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,0.16,"sine",0.065),i*105)); },
+    lose:  ()=>{ stopMusic(); [392,330,262,196].forEach((f,i)=>setTimeout(()=>tone(f,0.22,"sawtooth",0.06),i*135)); },
+  };
+
+  // ---------- 게임 상태 ----------
+  let state = "ready"; // ready | countdown | playing | won | lost
+  let map = [];
+  let balloons = [];
+  let waters = [];   // {c,r,t,arm} arm: 'c'|'h'|'v' 모양용
+  let items = [];    // {c,r,type}
+  let particles = [];
+  let shockwaves = []; // 물방울/폭발을 더 드라마틱하게 보여주는 링 효과
+  let screenShake = 0;
+  let entities = []; // 0번이 플레이어
+  let score = 0;
+  let elapsed = 0;
+  let timeLeft = GAME_TIME;
+  let countdown = 0;
+  let entityId = 1;
+
+  const player = () => entities[0];
+  const idx = (c,r) => r*COLS+c;
+  const inB = (c,r) => c>=0 && c<COLS && r>=0 && r<ROWS;
+  const cellCenter = (c,r) => ({x:c*TILE+TILE/2, y:r*TILE+TILE/2});
+  const tileOfX = px => Math.floor(px/TILE);
+
+  // ---------- 맵 생성 ----------
+  function buildMap(){
+    map = new Array(ROWS);
+    for(let r=0;r<ROWS;r++){
+      map[r] = new Array(COLS).fill(EMPTY);
+      for(let c=0;c<COLS;c++){
+        if(r===0||c===0||r===ROWS-1||c===COLS-1) map[r][c]=WALL;       // 외벽
+        else if(r%2===0 && c%2===0) map[r][c]=WALL;                     // 격자 기둥
+        else map[r][c]=BOX;                                            // 일단 상자
+      }
+    }
+    // 시작 지점은 비워서 즉사 방지
+    const spawns = [[1,1],[COLS-2,1],[1,ROWS-2],[COLS-2,ROWS-2]];
+    for(const [c,r] of spawns){
+      const around = [[c,r],[c+1,r],[c-1,r],[c,r+1],[c,r-1]];
+      for(const [cc,rr] of around){ if(inB(cc,rr) && map[rr][cc]===BOX) map[rr][cc]=EMPTY; }
+    }
+    // 상자를 일부만 남겨 통로 확보 (확률적으로 제거)
+    for(let r=1;r<ROWS-1;r++) for(let c=1;c<COLS-1;c++){
+      if(map[r][c]===BOX && Math.random()<0.18) map[r][c]=EMPTY;
+    }
+  }
+
+  // ---------- 엔티티 ----------
+  function makeEntity(c,r,isPlayer,palIndex){
+    const ctr = cellCenter(c,r);
+    return {
+      id: entityId++, x:ctr.x, y:ctr.y, isPlayer, palIndex,
+      r: TILE*0.34,
+      speedLv:1, balloonLv:1, powerLv:1,
+      maxBalloons:1, range:1,
+      alive:true, trapped:false, trapTimer:0, trapImmuneUntil:0,
+      mvx:0, mvy:0, faceDir:1,
+      // AI용
+      decideTimer:0, dir:{x:0,y:0}, placeCooldown:0, tgt:null,
+      escapeLock:null, // 봇이 풍선을 놓은 뒤 안전지대까지 강제로 도망가는 상태
+      wobble: Math.random()*6,
+    };
+  }
+  function refreshStats(e){
+    e.maxBalloons = e.balloonLv;
+    e.range = e.powerLv;
+    e.speed = BASE_SPEED + (e.speedLv-1)*SPEED_STEP;
+  }
+
+  function resetGame(){
+    score = 0; elapsed = 0; timeLeft = GAME_TIME; entityId = 1;
+    balloons = []; waters = []; items = []; particles = []; shockwaves = []; screenShake = 0;
+    buildMap();
+    entities = [];
+    const p = makeEntity(1,1,true,0);
+    refreshStats(p);
+    entities.push(p);
+    const botSpawns = [[COLS-2,1],[1,ROWS-2],[COLS-2,ROWS-2]];
+    botSpawns.forEach((s,i)=>{
+      const b = makeEntity(s[0],s[1],false,1+i);
+      refreshStats(b);
+      entities.push(b);
+    });
+    updateHUD();
+  }
+
+  function formatTime(sec){
+    sec = Math.max(0, Math.ceil(sec));
+    const m = Math.floor(sec/60);
+    const ss = String(sec%60).padStart(2,"0");
+    return `${m}:${ss}`;
+  }
+
+  function updateHUD(){
+    const p = player();
+    hud.score.textContent = score;
+    hud.time.textContent = formatTime(timeLeft);
+    hud.time.style.color = timeLeft <= 30 ? "#ffb3b3" : "#fff";
+    hud.balloon.textContent = p.balloonLv;
+    hud.power.textContent = p.powerLv;
+    hud.speed.textContent = p.speedLv;
+    hud.bots.textContent = entities.filter(e=>!e.isPlayer && e.alive).length;
+  }
+
+  // ---------- 충돌 / 이동 ----------
+  function balloonSolidFor(e,c,r){
+    const b = balloons.find(b=>b.c===c && b.r===r && !b.exploded);
+    if(!b) return false;
+    if(b.pass.has(e.id)) return false; // 설치한 칸에서 아직 안 벗어난 경우 통과
+    return true;
+  }
+  function solidForMove(e,c,r){
+    if(!inB(c,r)) return true;
+    if(map[r][c]===WALL || map[r][c]===BOX) return true;
+    if(balloonSolidFor(e,c,r)) return true;
+    return false;
+  }
+  // AABB가 칸과 겹치는지
+  function collidesAt(e,x,y){
+    const hs = e.r;
+    const minc = tileOfX(x-hs), maxc = tileOfX(x+hs);
+    const minr = tileOfX(y-hs), maxr = tileOfX(y+hs);
+    for(let r=minr;r<=maxr;r++) for(let c=minc;c<=maxc;c++){
+      if(solidForMove(e,c,r)) return true;
+    }
+    return false;
+  }
+  function moveEntity(e, dx, dy, dt){
+    const sp = e.speed*dt;
+    let vx = dx*sp, vy = dy*sp;
+    // 단일축 이동 시 레인 자동정렬(코너 진입 보조)
+    if(dx!==0 && dy===0){
+      const rc = (tileOfX(e.y))*TILE + TILE/2;
+      const d = rc - e.y; const snap = Math.min(Math.abs(d), sp*0.7);
+      e._snapY = Math.sign(d)*snap;
+    } else e._snapY = 0;
+    if(dy!==0 && dx===0){
+      const cc = (tileOfX(e.x))*TILE + TILE/2;
+      const d = cc - e.x; const snap = Math.min(Math.abs(d), sp*0.7);
+      e._snapX = Math.sign(d)*snap;
+    } else e._snapX = 0;
+
+    // X 이동
+    let nx = e.x + vx;
+    if(!collidesAt(e,nx,e.y)) e.x = nx;
+    if(e._snapY){ let ny=e.y+e._snapY; if(!collidesAt(e,e.x,ny)) e.y=ny; }
+    // Y 이동
+    let ny = e.y + vy;
+    if(!collidesAt(e,e.x,ny)) e.y = ny;
+    if(e._snapX){ let nx2=e.x+e._snapX; if(!collidesAt(e,nx2,e.y)) e.x=nx2; }
+
+    if(dx>0) e.faceDir=1; else if(dx<0) e.faceDir=-1;
+    e.mvx=dx; e.mvy=dy;
+  }
+
+  // ---------- 물풍선 / 폭발 ----------
+  function placeBalloon(e){
+    if(!e.alive || e.trapped) return false;
+    const c = tileOfX(e.x), r = tileOfX(e.y);
+    if(balloons.some(b=>b.c===c && b.r===r && !b.exploded)) return false;
+    const active = balloons.filter(b=>b.owner===e.id && !b.exploded).length;
+    if(active >= e.maxBalloons) return false;
+    balloons.push({ c, r, owner:e.id, fuse:BALLOON_FUSE, range:e.range, exploded:false, pass:new Set([e.id]) });
+    if(e.isPlayer) sfx.place(); else sfx.enemyPlace();
+    return true;
+  }
+
+  function blastTiles(c,r,range){
+    const tiles = [{c,r,arm:'c'}];
+    const dirs = [[1,0,'h'],[-1,0,'h'],[0,1,'v'],[0,-1,'v']];
+    for(const [dx,dy,arm] of dirs){
+      for(let i=1;i<=range;i++){
+        const cc=c+dx*i, rr=r+dy*i;
+        if(!inB(cc,rr) || map[rr][cc]===WALL) break;
+        tiles.push({c:cc,r:rr,arm});
+        if(map[rr][cc]===BOX) break; // 상자 하나 부수고 멈춤
+      }
+    }
+    return tiles;
+  }
+
+  function explode(b){
+    if(b.exploded) return;
+    b.exploded = true;
+    sfx.boom();
+    const tiles = blastTiles(b.c,b.r,b.range);
+    for(const t of tiles){
+      // 물줄기 생성
+      waters.push({c:t.c,r:t.r,t:0,arm:t.arm});
+      // 기존(폭발 전부터 있던) 아이템이 물에 닿으면 사라짐 — 드롭보다 먼저 처리해야
+      // 이번 폭발로 새로 떨어뜨리는 아이템이 즉시 지워지지 않는다.
+      const ii = items.findIndex(it=>it.c===t.c && it.r===t.r);
+      if(ii>=0) items.splice(ii,1);
+      // 연쇄 폭발
+      const chain = balloons.find(x=>!x.exploded && x.c===t.c && x.r===t.r && x!==b);
+      if(chain) chain.fuse = Math.min(chain.fuse, 0.001);
+      spawnSplash(t.c,t.r);
+      // 상자 파괴 + 아이템 드롭 (위 제거 처리 이후라 새 아이템은 살아남음)
+      if(map[t.r][t.c]===BOX){
+        map[t.r][t.c]=EMPTY;
+        score += 10;
+        spawnDebris(t.c,t.r);
+        if(Math.random()<0.5) dropItem(t.c,t.r);
+      }
+    }
+  }
+
+  function dropItem(c,r){
+    const roll = Math.random();
+    let type = roll<0.4 ? "balloon" : roll<0.75 ? "power" : "speed";
+    items.push({c,r,type,bob:Math.random()*6});
+  }
+
+  // ---------- 파티클 ----------
+  function spawnSplash(c,r){
+    const ctr = cellCenter(c,r);
+    for(let i=0;i<5;i++){
+      const a=Math.random()*Math.PI*2, s=40+Math.random()*90;
+      particles.push({x:ctr.x,y:ctr.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.4+Math.random()*0.2,age:0,col:theme.splash,size:3+Math.random()*3});
+    }
+  }
+  function spawnDebris(c,r){
+    const ctr = cellCenter(c,r);
+    for(let i=0;i<6;i++){
+      const a=Math.random()*Math.PI*2, s=30+Math.random()*70;
+      particles.push({x:ctr.x,y:ctr.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:0.5+Math.random()*0.3,age:0,col:"#c98a4b",size:3+Math.random()*3,grav:260});
+    }
+  }
+  function spawnTrapBurst(x,y){
+    screenShake = Math.max(screenShake, 15);
+    shockwaves.push({x,y,age:0,life:0.95,rad:TILE*0.25,col:theme.shock});
+    shockwaves.push({x,y,age:0,life:0.75,rad:TILE*0.52,col:theme.shockStrong});
+    for(let i=0;i<46;i++){
+      const a=Math.random()*Math.PI*2, s=55+Math.random()*190;
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.55+Math.random()*0.65,age:0,col:i%4===0?"#ffffff":(i%4===1?theme.ring:theme.splash),size:2+Math.random()*6});
+    }
+  }
+  function spawnPop(x,y){
+    screenShake = Math.max(screenShake, 10);
+    shockwaves.push({x,y,age:0,life:0.55,rad:TILE*0.55,col:theme.ring});
+    for(let i=0;i<28;i++){
+      const a=Math.random()*Math.PI*2, s=60+Math.random()*150;
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.5+Math.random()*0.3,age:0,col:i%4===0?theme.ring:theme.shock,size:3+Math.random()*5});
+    }
+  }
+
+  // ---------- 위험 판단(AI용) ----------
+  function dangerMap(extraBalloon){
+    const danger = new Uint8Array(COLS*ROWS);
+    const list = balloons.filter(b=>!b.exploded).slice();
+    if(extraBalloon) list.push(extraBalloon);
+    for(const b of list){
+      for(const t of blastTiles(b.c,b.r,b.range)) danger[idx(t.c,t.r)]=1;
+    }
+    for(const w of waters) danger[idx(w.c,w.r)]=1;
+    return danger;
+  }
+
+  function timedDangerMap(extraBalloon){
+    // 각 칸이 몇 초 뒤 위험해지는지 기록한다. 물줄기는 이미 위험하므로 0초.
+    const time = new Float32Array(COLS*ROWS);
+    time.fill(999);
+    const list = balloons.filter(b=>!b.exploded).slice();
+    if(extraBalloon) list.push(extraBalloon);
+    for(const b of list){
+      const fuse = typeof b.fuse === "number" ? b.fuse : BALLOON_FUSE;
+      for(const t of blastTiles(b.c,b.r,b.range)){
+        const i=idx(t.c,t.r);
+        if(fuse < time[i]) time[i] = fuse;
+      }
+    }
+    for(const w of waters) time[idx(w.c,w.r)] = 0;
+    return time;
+  }
+
+  function passForPath(c,r, ignoreBalloon){
+    if(!inB(c,r) || map[r][c]!==EMPTY) return false;
+    if(balloons.some(b=>!b.exploded && b.c===c && b.r===r && !(ignoreBalloon && b.c===ignoreBalloon.c && b.r===ignoreBalloon.r))) return false;
+    return true;
+  }
+
+  function reconstructStep(prev, found, sc, sr){
+    let cur=found, start=idx(sc,sr);
+    while(prev[cur]!==start && prev[cur]!==-1) cur=prev[cur];
+    const tc=cur%COLS, tr=(cur/COLS)|0;
+    return {x:Math.sign(tc-sc), y:Math.sign(tr-sr), goalC:found%COLS, goalR:(found/COLS)|0};
+  }
+
+  // BFS: start에서 goalFn 만족하는 가장 가까운 칸으로의 첫 스텝
+  function bfsStep(sc, sr, goalFn, blockDanger, danger){
+    const prev = new Int32Array(COLS*ROWS).fill(-1);
+    const distArr = new Int16Array(COLS*ROWS).fill(-1);
+    const seen = new Uint8Array(COLS*ROWS);
+    const q = [[sc,sr]]; seen[idx(sc,sr)]=1; distArr[idx(sc,sr)]=0;
+    let head=0, found=-1;
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    while(head<q.length){
+      const [c,r]=q[head++];
+      if((c!==sc||r!==sr) && goalFn(c,r,distArr[idx(c,r)])){ found=idx(c,r); break; }
+      for(const [dx,dy] of dirs){
+        const nc=c+dx, nr=r+dy, ni=idx(nc,nr);
+        if(!inB(nc,nr)||seen[ni]) continue;
+        if(!passForPath(nc,nr)) continue;
+        if(blockDanger && danger[ni]) continue;
+        seen[ni]=1; prev[ni]=idx(c,r); distArr[ni]=distArr[idx(c,r)]+1; q.push([nc,nr]);
+      }
+    }
+    if(found<0) return null;
+    const step = reconstructStep(prev, found, sc, sr);
+    step.dist = distArr[found];
+    return step;
+  }
+
+  function timedEscapeStep(sc, sr, timed, speed, extraSafeMargin=0.42){
+    // 봇 자살 방지 핵심: 경로의 각 칸에 도착하는 시간이 그 칸의 폭발 시간보다 충분히 빨라야만 통과시킨다.
+    const prev = new Int32Array(COLS*ROWS).fill(-1);
+    const distArr = new Int16Array(COLS*ROWS).fill(-1);
+    const seen = new Uint8Array(COLS*ROWS);
+    const q = [[sc,sr]]; seen[idx(sc,sr)]=1; distArr[idx(sc,sr)]=0;
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    let head=0, found=-1;
+    while(head<q.length){
+      const [c,r]=q[head++];
+      const here=idx(c,r), dist=distArr[here];
+      const arrive = (dist*TILE)/Math.max(1,speed);
+      if((c!==sc||r!==sr) && timed[here] >= 998){ found=here; break; }
+      for(const [dx,dy] of dirs){
+        const nc=c+dx, nr=r+dy, ni=idx(nc,nr);
+        if(!inB(nc,nr)||seen[ni]) continue;
+        if(!passForPath(nc,nr)) continue;
+        const nd = dist+1;
+        const nextArrive = (nd*TILE)/Math.max(1,speed);
+        // 이미 물줄기인 칸은 금지. 곧 터질 칸은 도착 여유가 있을 때만 통과.
+        if(timed[ni] <= nextArrive + extraSafeMargin) continue;
+        seen[ni]=1; prev[ni]=here; distArr[ni]=nd; q.push([nc,nr]);
+      }
+    }
+    if(found<0) return null;
+    const step = reconstructStep(prev, found, sc, sr);
+    step.dist = distArr[found];
+    step.escapeTime = (step.dist*TILE)/Math.max(1,speed);
+    return step;
+  }
+
+  function hasLineOfSight(c,r,tc,tr,range){
+    if(c!==tc && r!==tr) return false;
+    const dist = Math.abs(tc-c)+Math.abs(tr-r);
+    if(dist===0 || dist>range) return false;
+    const dx=Math.sign(tc-c), dy=Math.sign(tr-r);
+    for(let i=1;i<=dist;i++){
+      const cc=c+dx*i, rr=r+dy*i;
+      if(map[rr][cc]===WALL) return false;
+      if(i<dist && map[rr][cc]===BOX) return false;
+    }
+    return true;
+  }
+
+  function trapTargetsFor(e){
+    return entities
+      .filter(t=>t.alive && !t.trapped && t.id!==e.id)
+      .map(t=>({ent:t,c:tileOfX(t.x),r:tileOfX(t.y),d:Math.hypot(t.x-e.x,t.y-e.y)}))
+      .sort((a,b)=>targetPressureScore(e,a)-targetPressureScore(e,b));
+  }
+
+  function lockEscape(e, extraBalloon){
+    const c=tileOfX(e.x), r=tileOfX(e.y);
+    const timed = timedDangerMap(extraBalloon);
+    const escape = timedEscapeStep(c,r,timed,e.speed,0.48);
+    if(!escape) return null;
+    // 안전지대가 너무 멀면 설치하지 않는다. 여유를 넉넉하게 잡아 자폭을 크게 줄인다.
+    if(escape.escapeTime > BALLOON_FUSE - 0.85) return null;
+    e.escapeLock = {until: performance.now()/1000 + BALLOON_FUSE + 0.35};
+    return escape;
+  }
+
+  function lockedEscapeStep(e){
+    if(!e.escapeLock) return null;
+    const now=performance.now()/1000;
+    const c=tileOfX(e.x), r=tileOfX(e.y);
+    const timed = timedDangerMap();
+    if(timed[idx(c,r)] >= 998 || now > e.escapeLock.until){
+      e.escapeLock = null;
+      return null;
+    }
+    const escape = timedEscapeStep(c,r,timed,e.speed,0.30) || bfsStep(c,r,(cc,rr)=>timed[idx(cc,rr)]>=998,false,dangerMap());
+    return escape ? {x:escape.x,y:escape.y} : null;
+  }
+
+  function canEscapeAfterBombAt(e,c,r, fuseMargin=0.88){
+    if(!inB(c,r) || map[r][c]!==EMPTY) return false;
+    if(balloons.some(b=>!b.exploded && b.c===c && b.r===r)) return false;
+    const extra = {c,r,range:e.range,fuse:BALLOON_FUSE,exploded:false};
+    const timed = timedDangerMap(extra);
+    const escape = timedEscapeStep(c,r,timed,e.speed,0.46);
+    return !!(escape && escape.escapeTime < BALLOON_FUSE - fuseMargin);
+  }
+
+  function targetPressureScore(e,t){
+    // 플레이어를 조금 더 우선하되, 실제로 가까운 상대와 같은 라인에 있는 상대를 더 똑똑하게 노린다.
+    const c=tileOfX(e.x), r=tileOfX(e.y);
+    const line = (c===t.c || r===t.r) ? -90 : 0;
+    const playerBias = t.ent.isPlayer ? -120 : 0;
+    const trappedBias = t.ent.trapped ? 500 : 0;
+    return playerBias + line + trappedBias + t.d;
+  }
+
+  // ---------- AI ----------
+  // 봇이 "지금 칸에서 어느 한 칸으로 갈지" 한 스텝을 고른다. (x,y는 -1/0/1)
+  function botStep(e, danger){
+    const c = tileOfX(e.x), r = tileOfX(e.y);
+    const safe = (cc,rr)=>!danger[idx(cc,rr)];
+
+    // 0) 풍선을 직접 놓은 직후에는 공격/파밍을 완전히 중단하고 안전지대까지 탈출만 한다.
+    const forced = lockedEscapeStep(e);
+    if(forced) return forced;
+
+    // 1) 이미 위험한 칸이면 공격하지 않고 도주만 한다.
+    if(danger[idx(c,r)]){
+      const timed = timedDangerMap();
+      const step = timedEscapeStep(c,r,timed,e.speed,0.25) || bfsStep(c,r,safe,false,danger);
+      return step ? {x:step.x,y:step.y} : null;
+    }
+
+    // 2) 플레이어와 봇 모두를 공격 대상으로 삼되, 안전 탈출이 확실할 때만 물풍선을 놓는다.
+    const targets = trapTargetsFor(e);
+    const attackTarget = targets.find(t=>hasLineOfSight(c,r,t.c,t.r,e.range) && canEscapeAfterBombAt(e,c,r));
+    const nearBox = [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=> inB(c+dx,r+dy) && map[r+dy][c+dx]===BOX);
+    const canPlace = e.placeCooldown<=0 &&
+                     balloons.filter(b=>b.owner===e.id && !b.exploded).length < e.maxBalloons &&
+                     !balloons.some(b=>b.c===c&&b.r===r&&!b.exploded);
+
+    if(canPlace && attackTarget){
+      const extra = {c,r,range:e.range,fuse:BALLOON_FUSE,exploded:false};
+      const escape = lockEscape(e, extra);
+      if(escape){
+        placeBalloon(e);
+        e.placeCooldown = 1.6 + Math.random()*0.8;
+        return {x:escape.x,y:escape.y};
+      }
+    }
+
+    // 상자 파밍용 물풍선은 자살 원인이 되기 쉬워서 훨씬 보수적으로 제한한다.
+    // 타깃이 없고 주변이 완전히 안전하며 탈출 여유가 큰 경우에만 드물게 사용한다.
+    if(canPlace && nearBox && Math.random()<0.18 && waters.length===0){
+      const extra = {c,r,range:e.range,fuse:BALLOON_FUSE,exploded:false};
+      const escape = lockEscape(e, extra);
+      if(escape && escape.escapeTime < BALLOON_FUSE - 1.15){
+        placeBalloon(e);
+        e.placeCooldown = 2.4 + Math.random()*1.2;
+        return {x:escape.x,y:escape.y};
+      }
+    }
+
+    // 3) 목표 탐색: 위험 회피가 가능한 경로만 사용한다. 아이템보다 공격 위치를 우선시해서 대결 느낌을 강화한다.
+    const nearest = targets[0];
+    const step =
+      (nearest ? bfsStep(c,r,(cc,rr)=>hasLineOfSight(cc,rr,nearest.c,nearest.r,e.range) && canEscapeAfterBombAt(e,cc,rr), true, danger) : null) ||
+      (items.length ? bfsStep(c,r,(cc,rr)=>items.some(it=>it.c===cc&&it.r===rr), true, danger) : null) ||
+      bfsStep(c,r,(cc,rr)=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>inB(cc+dx,rr+dy)&&map[rr+dy][cc+dx]===BOX), true, danger);
+    if(step) return {x:step.x,y:step.y};
+
+    // 4) 갈 곳 없으면 안전한 이웃 칸으로 랜덤 배회
+    const opts=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>passForPath(c+dx,r+dy)&&!danger[idx(c+dx,r+dy)]);
+    if(opts.length){ const o=opts[(Math.random()*opts.length)|0]; return {x:o[0],y:o[1]}; }
+    return null;
+  }
+
+  // 칸 중심 → 인접 칸 중심으로 한 칸씩 정확히 이동한다.
+  // 이렇게 하면 항상 통로 중앙에 정렬돼 코너에서 모서리에 걸려 버벅이지 않는다.
+  function botThink(e, dt){
+    e.placeCooldown -= dt;
+
+    // 목표 칸이 새로 위험해졌으면 즉시 버리고 탈출 판단으로 전환한다.
+    if(e.tgt){
+      const timed = timedDangerMap();
+      const ti = idx(e.tgt.c,e.tgt.r);
+      if(timed[ti] <= (TILE/Math.max(1,e.speed)) + 0.20){ e.tgt = null; }
+    }
+
+    // 목표 칸으로 이동 중이면 그 중심을 향해 직진
+    if(e.tgt){
+      const ctr = cellCenter(e.tgt.c, e.tgt.r);
+      const dx = ctr.x - e.x, dy = ctr.y - e.y;
+      const dist = Math.hypot(dx,dy);
+      const step = e.speed*dt;
+      if(dist <= step){              // 도착 → 정확히 스냅하고 다음 결정 준비
+        e.x = ctr.x; e.y = ctr.y; e.tgt = null; e.mvx=0; e.mvy=0;
+      } else {
+        const ux=dx/dist, uy=dy/dist;
+        e.x += ux*step; e.y += uy*step;
+        if(dx<-0.01) e.faceDir=-1; else if(dx>0.01) e.faceDir=1;
+        e.mvx=ux; e.mvy=uy;
+        return;                      // 이동 중에는 새 결정을 하지 않는다
+      }
+    }
+
+    // 칸 중심에 정렬된 상태 → 다음 한 칸을 결정
+    const c = tileOfX(e.x), r = tileOfX(e.y);
+    const dir = botStep(e, dangerMap());
+    if(dir && (dir.x||dir.y)){
+      const nc=c+dir.x, nr=r+dir.y;
+      if(inB(nc,nr) && map[nr][nc]===EMPTY && !balloonSolidFor(e,nc,nr)){
+        e.tgt = {c:nc, r:nr};
+        if(dir.x<0) e.faceDir=-1; else if(dir.x>0) e.faceDir=1;
+      } else { e.mvx=0; e.mvy=0; }   // 막혔으면 제자리에서 대기(다음 프레임 재결정)
+    } else { e.mvx=0; e.mvy=0; }
+  }
+
+  // ---------- 아이템 줍기 ----------
+  function collectItems(e){
+    const c=tileOfX(e.x), r=tileOfX(e.y);
+    const i = items.findIndex(it=>it.c===c && it.r===r);
+    if(i<0) return;
+    const it = items[i]; items.splice(i,1);
+    if(it.type==="balloon") e.balloonLv = Math.min(e.balloonLv+1,6);
+    if(it.type==="power")   e.powerLv   = Math.min(e.powerLv+1,6);
+    if(it.type==="speed")   e.speedLv   = Math.min(e.speedLv+1,5);
+    refreshStats(e);
+    if(e.isPlayer){ score+=20; sfx.item(); }
+  }
+
+  // ---------- 물에 맞음 처리 ----------
+  function applyWater(now){
+    for(const e of entities){
+      if(!e.alive) continue;
+      const c=tileOfX(e.x), r=tileOfX(e.y);
+      const hit = waters.some(w=>w.c===c && w.r===r);
+      if(!hit) continue;
+      if(!e.trapped){
+        e.trapped=true; e.trapTimer=TRAP_TIME; e.trapImmuneUntil=now+TRAP_IMMUNE;
+        spawnTrapBurst(e.x,e.y);
+        e.trapLastWhole = Math.ceil(TRAP_TIME);
+        if(e.isPlayer) sfx.trap(); else tone(300,0.08,"sawtooth",0.025);
+      } else if(now > e.trapImmuneUntil){
+        popEntity(e); // 갇힌 상태에서 물에 또 맞으면 즉시 펑
+      }
+    }
+  }
+  function popEntity(e, bonus=200){
+    if(!e.alive) return;
+    e.alive=false; e.trapped=false;
+    spawnPop(e.x,e.y); sfx.pop();
+    if(e.isPlayer){ endGame(false); }
+    else { score+=bonus; updateHUD(); checkWin(); }
+  }
+
+  function finishTrappedEnemiesByPlayer(){
+    const p = player();
+    if(!p || !p.alive || p.trapped) return;
+    for(const e of entities){
+      if(e.isPlayer || !e.alive || !e.trapped) continue;
+      const d = Math.hypot(e.x-p.x, e.y-p.y);
+      // 갇힌 적에게 몸이 닿으면 즉시 물방울이 터지며 처치된다.
+      if(d <= p.r + e.r + TILE*0.18){
+        screenShake = Math.max(screenShake, 18);
+        shockwaves.push({x:e.x,y:e.y,age:0,life:0.7,rad:TILE*0.70,col:"#ffd23f"});
+        for(let i=0;i<18;i++){
+          const a=Math.random()*Math.PI*2, sp=90+Math.random()*170;
+          particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.45+Math.random()*0.35,age:0,col:i%3===0?"#ffffff":"#7fe3ff",size:3+Math.random()*5});
+        }
+        sfx.finish();
+        popEntity(e, 300);
+      }
+    }
+  }
+
+  function checkWin(){
+    if(entities.filter(b=>!b.isPlayer && b.alive).length===0) endGame(true);
+  }
+
+  // ---------- 업데이트 ----------
+  function update(dt){
+    if(state!=="playing") return;
+    const now = performance.now()/1000;
+    elapsed += dt;
+    timeLeft -= dt;
+    if(timeLeft <= 0){
+      timeLeft = 0;
+      endGame(false, "timeout");
+      updateHUD();
+      return;
+    }
+
+    const trappedPlayer = player();
+    if(trappedPlayer && trappedPlayer.alive && trappedPlayer.trapped){
+      const frac = Math.max(0, trappedPlayer.trapTimer/TRAP_TIME);
+      screenShake = Math.max(screenShake, 3 + (1-frac)*9);
+    }
+
+    // 플레이어 입력
+    const p = player();
+    if(p.alive && !p.trapped){
+      let dx=0, dy=0;
+      if(keys.left) dx-=1; if(keys.right) dx+=1;
+      if(keys.up) dy-=1; if(keys.down) dy+=1;
+      if(dx&&dy){ const k=Math.SQRT1_2; moveEntity(p,dx*k,dy*k,dt); }
+      else moveEntity(p,dx,dy,dt);
+      finishTrappedEnemiesByPlayer();
+    }
+
+    // 봇 사고
+    for(const e of entities){
+      if(e.isPlayer || !e.alive) continue;
+      if(e.trapped) continue;
+      botThink(e,dt);
+    }
+
+    // 풍선 통과세트 갱신(설치자가 칸을 벗어나면 막힘) + 퓨즈
+    for(const b of balloons){
+      if(b.exploded) continue;
+      for(const eid of Array.from(b.pass)){
+        const e = entities.find(x=>x.id===eid);
+        if(!e){ b.pass.delete(eid); continue; }
+        // 몸통(AABB)이 풍선 칸을 완전히 벗어났을 때만 단단해짐(자기 풍선에 끼임 방지)
+        const hs=e.r;
+        const ov = (e.x+hs > b.c*TILE) && (e.x-hs < (b.c+1)*TILE) &&
+                   (e.y+hs > b.r*TILE) && (e.y-hs < (b.r+1)*TILE);
+        if(!ov) b.pass.delete(eid);
+      }
+      b.fuse -= dt;
+      if(b.fuse<=0) explode(b);
+    }
+    balloons = balloons.filter(b=>!b.exploded);
+
+    // 물줄기 수명
+    for(const w of waters) w.t += dt;
+    applyWater(now);
+    waters = waters.filter(w=>w.t < WATER_DUR);
+
+    finishTrappedEnemiesByPlayer();
+
+    // 가둠 타이머
+    for(const e of entities){
+      if(e.alive && e.trapped){
+        e.trapTimer -= dt;
+        const whole = Math.max(0, Math.ceil(e.trapTimer));
+        if(e.isPlayer && whole !== e.trapLastWhole){
+          e.trapLastWhole = whole;
+          sfx.tick();
+        }
+        if(e.trapTimer<=0) popEntity(e); // 구조 없으면 펑(1인 모드)
+      }
+    }
+
+    // 아이템 줍기
+    for(const e of entities) if(e.alive) collectItems(e);
+
+    // 파티클 / 충격파
+    for(const pt of particles){
+      pt.age+=dt;
+      if(pt.grav) pt.vy+=pt.grav*dt;
+      pt.x+=pt.vx*dt; pt.y+=pt.vy*dt;
+    }
+    particles = particles.filter(pt=>pt.age<pt.life);
+    for(const sw of shockwaves) sw.age+=dt;
+    shockwaves = shockwaves.filter(sw=>sw.age<sw.life);
+    screenShake = Math.max(0, screenShake - dt*24);
+
+    updateHUD();
+  }
+
+  // ---------- 렌더 ----------
+  function roundRect(x,y,w,h,rad){
+    ctx.beginPath();
+    ctx.moveTo(x+rad,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rad);
+    ctx.arcTo(x+w,y+h,x,y+h,rad);
+    ctx.arcTo(x,y+h,x,y,rad);
+    ctx.arcTo(x,y,x+w,y,rad);
+    ctx.closePath();
+  }
+  function drawEmoji(emoji,x,y,size){
+    ctx.font = size+"px 'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif";
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(emoji,x,y);
+  }
+
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    ctx.save();
+    if(screenShake>0){
+      ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+    }
+    // 바닥(체크무늬)
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const x=c*TILE,y=r*TILE;
+      ctx.fillStyle = ((c+r)&1) ? theme.floorB : theme.floorA;
+      ctx.fillRect(x,y,TILE,TILE);
+    }
+    // 블록
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const x=c*TILE,y=r*TILE;
+      if(map[r][c]===WALL) blit(SPR.wall,x,y,TILE,TILE,false);
+      else if(map[r][c]===BOX) blit(SPR.crate,x,y,TILE,TILE,false);
+    }
+    // 아이템
+    for(const it of items){
+      const ctr=cellCenter(it.c,it.r);
+      const bob = Math.sin(performance.now()/300 + it.bob)*2.5;
+      const dh=TILE*0.74, dw=dh;
+      blit(SPR.items[it.type], ctr.x-dw/2, ctr.y-dh/2+bob, dw, dh, false);
+    }
+    // 물풍선
+    for(const b of balloons){
+      const ctr=cellCenter(b.c,b.r);
+      const pulse = 1 + Math.sin(performance.now()/(b.fuse<0.9?60:150))*0.07;
+      const dh=TILE*0.96*pulse, dw=dh*14/16;
+      blit(SPR.balloon, ctr.x-dw/2, ctr.y-dh/2, dw, dh, false);
+    }
+    // 물줄기(폭발) — 픽셀 스플래시
+    for(const w of waters){
+      const x=w.c*TILE, y=w.r*TILE;
+      const k=w.t/WATER_DUR, grow=Math.min(1,w.t/0.10);
+      const N=7, cell=TILE/N, reach=Math.round(grow*4);
+      ctx.save();
+      ctx.globalAlpha=(1-k)*0.85;
+      for(let yy=0;yy<N;yy++) for(let xx=0;xx<N;xx++){
+        const d=Math.abs(xx-3)+Math.abs(yy-3);
+        if(d>reach) continue;
+        ctx.fillStyle = d<=1 ? theme.waterCore : d<=2 ? theme.waterMid : theme.waterEdge;
+        ctx.fillRect(Math.floor(x+xx*cell), Math.floor(y+yy*cell), Math.ceil(cell)+1, Math.ceil(cell)+1);
+      }
+      ctx.restore();
+    }
+    // 충격파 링
+    for(const sw of shockwaves){
+      const k=sw.age/sw.life;
+      ctx.save();
+      ctx.globalAlpha=(1-k)*0.75;
+      ctx.strokeStyle=sw.col;
+      ctx.lineWidth=3;
+      ctx.beginPath();
+      ctx.arc(sw.x,sw.y,sw.rad + k*TILE*1.15,0,Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    // 파티클 (픽셀 사각)
+    for(const pt of particles){
+      ctx.globalAlpha = Math.max(0,1-pt.age/pt.life);
+      ctx.fillStyle=pt.col;
+      const s=Math.ceil(pt.size);
+      ctx.fillRect(Math.floor(pt.x-s/2),Math.floor(pt.y-s/2),s,s);
+    }
+    ctx.globalAlpha=1;
+
+    // 엔티티 (픽셀 캐릭터)
+    for(const e of entities){
+      if(!e.alive) continue;
+      const moving=(e.mvx||e.mvy);
+      const bob = Math.sin(performance.now()/150 + e.wobble) * (moving?2.5:1);
+      // 그림자
+      ctx.fillStyle="rgba(0,0,0,.22)";
+      ctx.beginPath(); ctx.ellipse(e.x,e.y+TILE*0.34,TILE*0.28,TILE*0.1,0,0,Math.PI*2); ctx.fill();
+      // 스프라이트 (발끝이 그림자 근처에 오도록 배치)
+      const charW=TILE*1.04, charH=charW*22/18;
+      const dx=e.x-charW/2, dy=e.y+TILE*0.42-charH+bob;
+      blit(SPR.chars[e.palIndex], dx, dy, charW, charH, e.faceDir<0);
+
+      // 물방울에 갇힘 — 큰 타이머, 경고 문구, 흔들리는 거품으로 더 박진감 있게 표현
+      if(e.trapped){
+        const frac = Math.max(0,e.trapTimer/TRAP_TIME);
+        const danger = frac < 0.34;
+        const panic = 1-frac;
+        const pulse = 1 + Math.sin(performance.now()/42)*0.08 + panic*0.23;
+        const rad=TILE*(0.54 + panic*0.18)*pulse;
+        const wob = Math.sin(performance.now()/58)*3.6;
+        ctx.save();
+        // 주변을 살짝 어둡게 깔아서 갇힌 캐릭터와 타이머가 튀게 한다
+        ctx.globalAlpha = e.isPlayer ? 0.18 + panic*0.16 : 0.10;
+        ctx.fillStyle = danger ? theme.trapDanger : theme.trapShade;
+        ctx.fillRect(0,0,W,H);
+        ctx.globalAlpha = 1;
+
+        // 거품 외곽 충격 링
+        ctx.strokeStyle = danger ? "rgba(255,107,107,.95)" : "rgba(255,255,255,.92)";
+        ctx.lineWidth = 4 + panic*2;
+        const grd=ctx.createRadialGradient(e.x-rad*0.35,e.y-rad*0.38,rad*0.05,e.x,e.y,rad);
+        grd.addColorStop(0,"rgba(255,255,255,.62)");
+        grd.addColorStop(0.46,theme.bubbleMid);
+        grd.addColorStop(1,danger?"rgba(255,107,107,.32)":theme.bubbleEdge);
+        ctx.fillStyle=grd;
+        ctx.beginPath(); ctx.arc(e.x,e.y+wob,rad,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+        // 거품 하이라이트와 작은 기포
+        ctx.fillStyle="rgba(255,255,255,.78)";
+        ctx.beginPath(); ctx.arc(e.x-rad*0.36,e.y-rad*0.34,rad*0.16,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x+rad*0.29,e.y+rad*0.16,rad*0.075,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x+Math.sin(performance.now()/120)*rad*0.45,e.y-rad*0.62,rad*0.055,0,Math.PI*2); ctx.fill();
+
+        // 대형 카운트다운 링
+        ctx.strokeStyle = danger ? theme.dangerWarn : theme.ring;
+        ctx.lineWidth = 7;
+        ctx.beginPath(); ctx.arc(e.x,e.y+wob,rad+8,-Math.PI/2,-Math.PI/2+frac*Math.PI*2); ctx.stroke();
+
+        // 큰 타이머 숫자: 물방울 중앙에 박음
+        const txt=Math.max(0,Math.ceil(e.trapTimer)).toString();
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.font=`900 ${danger?38:34}px 'Trebuchet MS','Segoe UI',sans-serif`;
+        ctx.lineWidth=7;
+        ctx.strokeStyle="rgba(0,0,0,.62)";
+        ctx.fillStyle=danger?"#fff0f0":"#fff8c7";
+        ctx.strokeText(txt,e.x,e.y+wob+1); ctx.fillText(txt,e.x,e.y+wob+1);
+
+        // 플레이어가 갇혔을 때만 화면 상단에 큼직한 경고
+        if(e.isPlayer){
+          ctx.font="900 24px 'Trebuchet MS','Segoe UI',sans-serif";
+          ctx.lineWidth=6;
+          ctx.strokeStyle="rgba(0,0,0,.65)";
+          ctx.fillStyle=danger?theme.dangerWarn:theme.warn;
+          const warn = danger ? "터지기 직전!" : "물방울에 갇힘!";
+          ctx.strokeText(warn,W/2,54); ctx.fillText(warn,W/2,54);
+        }
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  // ---------- 루프 ----------
+  let last=0;
+  function loop(ts){
+    if(!last) last=ts;
+    let dt=(ts-last)/1000; last=ts;
+    if(dt>0.05) dt=0.05; // 큰 프레임 점프 방지
+    if(state==="countdown"){
+      countdown -= dt;
+      if(countdown<=0){ state="playing"; }
+    }
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- 카운트다운/오버레이 ----------
+  function showReadyOverlay(text){
+    overlay.classList.remove("hidden");
+    ovTitle.classList.remove("lose");
+    ovTitle.textContent = "물풍선 아케이드";
+    ovText.textContent = text || `테마와 맵 크기를 고른 뒤 시작하세요. 현재 맵: ${MAP_PRESETS[currentMapKey].label} ${COLS}x${ROWS}`;
+    ovBtn.style.display = "";
+    ovBtn.textContent = "게임 시작";
+  }
+
+  function startCountdown(){
+    resetGame();
+    startMusic();
+    state="countdown"; countdown=3.0;
+    const tick=()=>{
+      if(state!=="countdown"){
+        if(state==="playing") overlay.classList.add("hidden");
+        return;
+      }
+      const n=Math.ceil(countdown);
+      overlay.classList.remove("hidden");
+      ovTitle.classList.remove("lose");
+      ovTitle.innerHTML = `<span class="countdown">${n>0?n:"GO!"}</span>`;
+      ovText.textContent=""; ovBtn.style.display="none";
+      if(countdown>0) requestAnimationFrame(tick);
+      else { overlay.classList.add("hidden"); }
+    };
+    tick();
+  }
+  function endGame(win, reason){
+    if(state!=="playing") return;
+    state = win?"won":"lost";
+    overlay.classList.remove("hidden");
+    ovBtn.style.display="";
+    ovBtn.textContent="다시 하기";
+    if(win){
+      ovTitle.classList.remove("lose");
+      ovTitle.innerHTML="🏆 승리!";
+      ovText.textContent=`모든 봇을 처치했습니다! 점수 ${score} · 남은 시간 ${formatTime(timeLeft)}`;
+      sfx.win();
+    } else {
+      ovTitle.classList.add("lose");
+      ovTitle.innerHTML= reason === "timeout" ? "⏰ 시간 종료!" : "💦 펑!";
+      ovText.textContent= reason === "timeout" ? `3분 안에 봇을 모두 처치하지 못했습니다… 점수 ${score}` : `물방울에 갇혀 터졌습니다… 점수 ${score}`;
+      sfx.lose();
+    }
+    updateHUD();
+  }
+
+  ovBtn.addEventListener("click", ()=>{ ensureAudio(); startCountdown(); });
+  document.querySelectorAll("[data-theme-choice]").forEach(btn=>{
+    btn.addEventListener("click", ()=>applyTheme(btn.dataset.themeChoice));
+  });
+  document.querySelectorAll("[data-map-choice]").forEach(btn=>{
+    btn.addEventListener("click", ()=>applyMapPreset(btn.dataset.mapChoice, true));
+  });
+
+  // ---------- 입력 ----------
+  const keys={up:false,down:false,left:false,right:false};
+  const KEYMAP={
+    ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",
+    w:"up",s:"down",a:"left",d:"right",W:"up",S:"down",A:"left",D:"right"
+  };
+  window.addEventListener("keydown",(ev)=>{
+    if(ev.key in KEYMAP){ keys[KEYMAP[ev.key]]=true; ev.preventDefault(); }
+    if(ev.key===" "||ev.key==="z"||ev.key==="Z"){ ev.preventDefault(); if(state==="playing") placeBalloon(player()); }
+    if(ev.key==="r"||ev.key==="R"){ ensureAudio(); startCountdown(); }
+  });
+  window.addEventListener("keyup",(ev)=>{ if(ev.key in KEYMAP){ keys[KEYMAP[ev.key]]=false; ev.preventDefault(); } });
+
+  // 터치/마우스 패드
+  function bindHold(el,on,off){
+    const start=(e)=>{ e.preventDefault(); ensureAudio(); on(); };
+    const end=(e)=>{ e.preventDefault(); off(); };
+    el.addEventListener("touchstart",start,{passive:false});
+    el.addEventListener("touchend",end); el.addEventListener("touchcancel",end);
+    el.addEventListener("mousedown",start); el.addEventListener("mouseup",end);
+    el.addEventListener("mouseleave",end);
+  }
+  document.querySelectorAll(".dpad button[data-dir]").forEach(btn=>{
+    const d=btn.dataset.dir;
+    bindHold(btn, ()=>keys[d]=true, ()=>keys[d]=false);
+  });
+  bindHold(document.getElementById("bomb"),
+    ()=>{ if(state==="playing") placeBalloon(player()); },
+    ()=>{});
+
+  // 첫 화면 준비
+  document.body.dataset.theme = currentThemeKey;
+  applyMapPreset(currentMapKey, false);
+  resetGame();
+  showReadyOverlay();
+  applyTheme(currentThemeKey);
+  render();
+})();
+</script>
+</body>
+</html>
